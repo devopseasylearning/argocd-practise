@@ -5,10 +5,10 @@
 replicaCount: 10
 
 image:
-  repository: devopseasylearning2021/food
+  repository: devopseasylevgfdgerheryetryterytyttytytyytytytarning2021/food
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "001"
+  tag: "gisele"
 
 imagePullSecrets: []
 nameOverride: ""
