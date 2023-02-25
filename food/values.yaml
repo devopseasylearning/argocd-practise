@@ -5,10 +5,10 @@
 replicaCount: 10
 
 image:
-  repository: devopseasylevgfdgerheryetryterytyttytytyytytytarning2021/food
+  repository: nginx
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "gisele"
+  tag: "1.22.1"
 
 imagePullSecrets: []
 nameOverride: ""
