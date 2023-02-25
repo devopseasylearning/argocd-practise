@@ -1,0 +1,366 @@
+
+# Source: weatherapp-auth/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: weatherapp-auth
+  labels:
+    helm.sh/chart: weatherapp-auth-0.1.0
+    app.kubernetes.io/name: weatherapp-auth
+    app.kubernetes.io/instance: weatherapp-auth
+    app.kubernetes.io/version: "0.0.1"
+    app.kubernetes.io/managed-by: Helm
+---
+# Source: weatherapp-auth/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: weatherapp-auth
+  labels:
+    helm.sh/chart: weatherapp-auth-0.1.0
+    app.kubernetes.io/name: weatherapp-auth
+    app.kubernetes.io/instance: weatherapp-auth
+    app.kubernetes.io/version: "0.0.1"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: weatherapp-auth
+    app.kubernetes.io/instance: weatherapp-auth
+---
+# Source: weatherapp-auth/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: weatherapp-auth
+  labels:
+    helm.sh/chart: weatherapp-auth-0.1.0
+    app.kubernetes.io/name: weatherapp-auth
+    app.kubernetes.io/instance: weatherapp-auth
+    app.kubernetes.io/version: "0.0.1"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: weatherapp-auth
+      app.kubernetes.io/instance: weatherapp-auth
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: weatherapp-auth
+        app.kubernetes.io/instance: weatherapp-auth
+    spec:
+      serviceAccountName: weatherapp-auth
+      securityContext:
+        {}
+      containers:
+        - name: weatherapp-auth
+          securityContext:
+            {}
+          image: "afakharany/weatherapp-auth:0.0.1"
+          imagePullPolicy: IfNotPresent
+          env:
+          - name: DB_HOST
+            value: mysql
+          - name: DB_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: mysql-secret
+                key: password
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+          resources:
+            {}
+
+--- 
+
+# Source: weatherapp-mysql/templates/secret.yml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mysql-secret
+type: kubernetes.io/basic-auth
+stringData:
+  password: "dGVzdDEyNDU="
+---
+# Source: weatherapp-mysql/templates/pv.yml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: mysql-pv-volume
+  labels:
+    type: local
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/mnt/data"
+---
+# Source: weatherapp-mysql/templates/pvc.yml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-pv-claim
+spec:
+  storageClassName: manual
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+---
+# Source: weatherapp-mysql/templates/svc.yml
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql
+spec:
+  ports:
+  - port: 3306
+  selector:
+    app: mysql
+---
+# Source: weatherapp-mysql/templates/deployment.yml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql
+spec:
+  selector:
+    matchLabels:
+      app: mysql
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      containers:
+      - image: mysql:8.0.32
+        name: mysql
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: password
+        ports:
+        - containerPort: 3306
+          name: mysql
+        volumeMounts:
+        - name: mysql-persistent-storage
+          mountPath: /var/lib/mysql
+      volumes:
+      - name: mysql-persistent-storage
+        persistentVolumeClaim:
+          claimName: mysql-pv-claim
+
+--- 
+
+# Source: weatherapp-ui/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: weatherapp-ui
+  labels:
+    helm.sh/chart: weatherapp-ui-0.1.0
+    app.kubernetes.io/name: weatherapp-ui
+    app.kubernetes.io/instance: weatherapp-ui
+    app.kubernetes.io/version: "0.0.1"
+    app.kubernetes.io/managed-by: Helm
+---
+# Source: weatherapp-ui/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: weatherapp-ui
+  labels:
+    helm.sh/chart: weatherapp-ui-0.1.0
+    app.kubernetes.io/name: weatherapp-ui
+    app.kubernetes.io/instance: weatherapp-ui
+    app.kubernetes.io/version: "0.0.1"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 80
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: weatherapp-ui
+    app.kubernetes.io/instance: weatherapp-ui
+---
+# Source: weatherapp-ui/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: weatherapp-ui
+  labels:
+    helm.sh/chart: weatherapp-ui-0.1.0
+    app.kubernetes.io/name: weatherapp-ui
+    app.kubernetes.io/instance: weatherapp-ui
+    app.kubernetes.io/version: "0.0.1"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: weatherapp-ui
+      app.kubernetes.io/instance: weatherapp-ui
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: weatherapp-ui
+        app.kubernetes.io/instance: weatherapp-ui
+    spec:
+      serviceAccountName: weatherapp-ui
+      securityContext:
+        {}
+      containers:
+        - name: weatherapp-ui
+          securityContext:
+            {}
+          image: "afakharany/weatherapp-ui:0.0.1"
+          imagePullPolicy: IfNotPresent
+          env:
+          - name: AUTH_HOST
+            value: weatherapp-auth
+          - name: AUTH_PORT
+            value: "8080"
+          - name: WEATHER_HOST
+            value: weatherapp-weather
+          - name: WEATHER_PORT
+            value: "5000"
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+          resources:
+            {}
+
+
+
+---
+# Source: weatherapp-weather/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: weatherapp-weather
+  labels:
+    helm.sh/chart: weatherapp-weather-0.1.0
+    app.kubernetes.io/name: weatherapp-weather
+    app.kubernetes.io/instance: weatherapp-weather
+    app.kubernetes.io/version: "0.0.1"
+    app.kubernetes.io/managed-by: Helm
+---
+# Source: weatherapp-weather/templates/secret.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+    name: weatherapp-weather
+type: Opaque
+data:
+    apikey: "ecbc396f46mshb65cbb1f82cf334p1fcc87jsna5e962a3c542"
+---
+# Source: weatherapp-weather/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: weatherapp-weather
+  labels:
+    helm.sh/chart: weatherapp-weather-0.1.0
+    app.kubernetes.io/name: weatherapp-weather
+    app.kubernetes.io/instance: weatherapp-weather
+    app.kubernetes.io/version: "0.0.1"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5000
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: weatherapp-weather
+    app.kubernetes.io/instance: weatherapp-weather
+---
+# Source: weatherapp-weather/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: weatherapp-weather
+  labels:
+    helm.sh/chart: weatherapp-weather-0.1.0
+    app.kubernetes.io/name: weatherapp-weather
+    app.kubernetes.io/instance: weatherapp-weather
+    app.kubernetes.io/version: "0.0.1"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: weatherapp-weather
+      app.kubernetes.io/instance: weatherapp-weather
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: weatherapp-weather
+        app.kubernetes.io/instance: weatherapp-weather
+    spec:
+      serviceAccountName: weatherapp-weather
+      securityContext:
+        {}
+      containers:
+        - name: weatherapp-weather
+          securityContext:
+            {}
+          image: "afakharany/weatherapp-weather:0.0.1"
+          imagePullPolicy: IfNotPresent
+          env:
+          - name: APIKEY
+            value: 'ecbc396f46mshb65cbb1f82cf334p1fcc87jsna5e962a3c542'
+          ports:
+            - name: http
+              containerPort: 5000
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+          resources:
+            {}
+
+
